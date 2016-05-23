@@ -1,7 +1,7 @@
 {
   "name": "node-http-cache",
   "version": "1.0.0",
-  "description": "node-http-cache ===============",
+  "description": "This module uses a simple filesystem storage to persist http responses.\nThen you can retrieve those responses from disk instead of an http connection.",
   "main": "index.js",
   "directories": {
     "test": "test"
