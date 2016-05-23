@@ -33,7 +33,7 @@
     "url": "https://github.com/neuquino/node-http-cache/issues"
   },
   "engines":{
-    "node": ">=4.x"
+    "node": ">=4.4.x"
   },
   "os":["linux"],
   "publishConfig": {
