@@ -29,7 +29,6 @@ var server = http.createServer(mockService);
 describe('users service', function () {
 	this.timeout(5000);
 	it('build snapshot', function (done) {
-		var debug = debugFactory('test:users_service:build_snapshot');
 		server.listen(PORT,'localhost',function serverStarted (err) {
 			if (err) {console.error(err.message);}
 			console.log(util.format('Server started at http//localhost:%s',PORT));
@@ -37,7 +36,7 @@ describe('users service', function () {
 				logger: require('winston'),
 				location: process.env.TEST_LOCATION || '/tmp',
 				services:[{
-					cronExpression: '* * * * * *',
+					cronExpression: '* * * * *',
 					name: SERVICE_NAME,
 					timezone: 'America/Buenos_Aires',
 					httpOptions:{
