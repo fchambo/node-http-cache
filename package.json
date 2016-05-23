@@ -1,0 +1,43 @@
+{
+  "name": "node-http-cache",
+  "version": "1.0.0",
+  "description": "node-http-cache ===============",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "devDependencies": {
+    "mocha": "^2.4.5",
+    "should": "^8.3.2",
+    "winston": "2.2.0"
+  },
+  "dependencies": {
+    "debug": "2.2.0",
+    "level": "1.4.0",
+    "lodash": "4.11.1",
+    "cron": "1.1.0",
+    "q": "1.4.1",
+    "q-io": "1.13.2",
+    "winston": "2.2.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neuquino/node-http-cache.git"
+  },
+  "author": "Facundo Chambó <fchambo@gmail.com> (https://github.com/neuquino)",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/neuquino/node-http-cache/issues"
+  },
+  "engines":{
+    "node": ">0.10.x"
+  },
+  "os":["linux"],
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org"
+  },
+  "homepage": "https://github.com/neuquino/node-http-cache#readme"
+}
