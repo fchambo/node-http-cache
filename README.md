@@ -1,4 +1,4 @@
-[![Travis-CI](https://api.travis-ci.org/neuquino/node-http-cache.svg?branch=master)](https://travis-ci.org/neuquino/node-http-cache)
+[![Travis-CI](https://api.travis-ci.org/neuquino/node-http-cache.svg?branch=master)](https://travis-ci.org/neuquino/node-http-cache) [![GitHub issues](https://img.shields.io/github/issues/neuquino/node-http-cache.svg?style=plastic)](https://github.com/neuquino/node-http-cache/issues) [![GitHub license](https://img.shields.io/badge/license-Apache_2.0-blue.svg?style=plastic)](https://raw.githubusercontent.com/neuquino/node-http-cache/master/LICENSE) [![Node JS version](https://img.shields.io/node/v/neuquino/node-http-cache.svg?style=plastic)](https://nodejs.org/en/) [![npm downloads](https://img.shields.io/npm/dt/neuquino/node-http-cache.svg?style=plastic)](https://www.npmjs.com/package/node-http-cache)
 
 #HTTP Cache
 
