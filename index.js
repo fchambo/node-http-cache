@@ -8,6 +8,7 @@ var _ = require('lodash');
 var zlib = require('zlib');
 var CronJob = require('cron').CronJob;
 var level = require('level');
+var EventEmitter = require('events').EventEmitter;
 const assert = require('assert');
 
 module.exports = function factory (config) {
@@ -85,13 +86,14 @@ module.exports = function factory (config) {
 					db.put(service.name,response.body,function callback(err) {
 						if (err){
 							debug('error >> %s', err.message);
+							this.emit('updateError',err);
 							deferred.reject(err.message);
 						}else{
+							this.emit('updateData',response.body);
 							deferred.resolve(response.body);
 						}
 					});
 					return deferred.promise;
-					//return Q.nfcall(db.put,service.name,response.body);
 				}
 			).fail(function (err) {
 				debug('error >> %s >> %s',err.message, err.stack);
@@ -140,6 +142,7 @@ module.exports = function factory (config) {
 		db.get(serviceName, function callback (err, data) {
 			if(err){
 				debug('error >> %s',err.message);
+				this.emit('getError',err);
 				deferred.reject(err);
 			}else{
 				deferred.resolve(JSON.parse(data));
@@ -156,12 +159,18 @@ module.exports = function factory (config) {
 		.then(
 			function debugLog(data){
 				debug('%s >> %j', serviceName,data);
+				this.emit('getData',{
+					name: serviceName,
+					data: JSON.parse(data)
+				});
 				return data;
 			}
 		).fail(function (err) {
 			debug('error >> %s', err.message);
 		});
 	};
+
+	util.inherits(NodeHttpCache,EventEmitter);
 
 	return NodeHttpCache;
 };
