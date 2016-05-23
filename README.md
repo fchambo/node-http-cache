@@ -1,3 +1,5 @@
+[![Travis-CI](https://api.travis-ci.org/neuquino/node-http-cache.svg?branch=master)](https://travis-ci.org/neuquino/node-http-cache)
+
 #HTTP Cache
 
 >This module uses a simple filesystem storage ([levelup](https://www.npmjs.com/package/levelup)) to persist http responses. Storage is updated using cron expressions (see [crontab manpage](http://crontab.org/) for more detail on how to build these expressions).
