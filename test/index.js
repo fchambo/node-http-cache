@@ -35,7 +35,7 @@ describe('users service', function () {
 			console.log(util.format('Server started at http//localhost:%s',PORT));
 			var config = {
 				logger: require('winston'),
-				location: '/tmp',
+				location: process.env.TEST_LOCATION + '/tmp',
 				services:[{
 					cronExpression: '* * * * * *',
 					name: SERVICE_NAME,
