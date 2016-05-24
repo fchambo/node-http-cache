@@ -116,7 +116,7 @@ Once data is updated to the filesystem storage.
 
 ```javascript
 {
-  //Name of service retrieved
+  //Name of service updated
   name: String,
   //Data retrieved
   data: Object
