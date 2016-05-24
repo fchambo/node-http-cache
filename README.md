@@ -126,3 +126,9 @@ Once data is updated to the filesystem storage.
 ### updateError
 
 Error updating data for service. The returning value is an instance of [Error](https://nodejs.org/dist/latest-v4.x/docs/api/errors.html#errors_class_error)
+
+## TO DO
+
+- In memory storage
+- Partial Updates
+- Indexes
