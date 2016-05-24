@@ -95,7 +95,7 @@ module.exports = function factory (config) {
 							deferred.reject(err.message);
 						}else{
 							debug('updateData >> %j', response.body);
-							self.emit('updateData',response.body);
+							self.emit('updateData',{name:service.name,data:response.body});
 							deferred.resolve(response.body);
 						}
 					});
