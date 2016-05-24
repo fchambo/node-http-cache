@@ -11,8 +11,15 @@ var level = require('level');
 var EventEmitter = require('events').EventEmitter;
 const assert = require('assert');
 
+var instance;
+
 module.exports = function factory (config) {
+	if (instance){
+		return instance;
+	}
+
 	var db;
+	var self;
 
 	function buildConfig (config) {
 		var debug = debugFactory('node-http-cache:buildConfig');
@@ -85,11 +92,10 @@ module.exports = function factory (config) {
 					var deferred = Q.defer();
 					db.put(service.name,response.body,function callback(err) {
 						if (err){
-							debug('error >> %s', err.message);
-							this.emit('updateError',err);
 							deferred.reject(err.message);
 						}else{
-							this.emit('updateData',response.body);
+							debug('updateData >> %j', response.body);
+							self.emit('updateData',response.body);
 							deferred.resolve(response.body);
 						}
 					});
@@ -97,6 +103,7 @@ module.exports = function factory (config) {
 				}
 			).fail(function (err) {
 				debug('error >> %s >> %s',err.message, err.stack);
+				self.emit('updateError',err);
 				throw err;
 			});
 		};
@@ -125,7 +132,10 @@ module.exports = function factory (config) {
 			});
 		});
 		debug('db >> %j',db);
-		return {};
+		return function () {
+			EventEmitter.call(this);
+			self = this;
+		};
 	}
 
 	var debug = debugFactory('node-http-cache:factory');
@@ -135,16 +145,17 @@ module.exports = function factory (config) {
 	debug('_config >> %j', _config);
 	var NodeHttpCache = init(_config);
 
-	NodeHttpCache.get = function (serviceName,filters) {
+	util.inherits(NodeHttpCache,EventEmitter);
+
+	NodeHttpCache.prototype.get = function (serviceName,filters) {
 		var debug = debugFactory('node-http-cache:get');
 		debug ('db >> %j', db);
 		var deferred = Q.defer();
 		db.get(serviceName, function callback (err, data) {
 			if(err){
-				debug('error >> %s',err.message);
-				this.emit('getError',err);
 				deferred.reject(err);
 			}else{
+				debug('data >> %s', data);
 				deferred.resolve(JSON.parse(data));
 			}
 		});
@@ -155,22 +166,22 @@ module.exports = function factory (config) {
 				debug('filters >> %j', filters);	
 				return filters ? _.filter(data, _.matches(filters)) : data;
 			}
-		)
-		.then(
+		).then(
 			function debugLog(data){
 				debug('%s >> %j', serviceName,data);
-				this.emit('getData',{
+				self.emit('getData',{
 					name: serviceName,
-					data: JSON.parse(data)
+					data: data
 				});
 				return data;
 			}
 		).fail(function (err) {
 			debug('error >> %s', err.message);
+			self.emit('getError', err);
 		});
 	};
 
-	util.inherits(NodeHttpCache,EventEmitter);
+	instance = new NodeHttpCache();
 
-	return NodeHttpCache;
+	return instance;
 };
