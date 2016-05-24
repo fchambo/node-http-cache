@@ -81,3 +81,48 @@ Node HTTP Cache uses [q-io](https://github.com/kriskowal/q-io) internally to mak
 *Required*: `false`
 
 *Default*: `'GMT-0'`
+
+## Retrieve data
+
+### get(serviceName)
+
+Retrieves data saved to the service which name is equal to `serviceName`.
+
+Returns a [Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)
+
+
+## Events
+
+### getData
+
+Once data is retrieved from the filesystem storage.
+
+```javascript
+{
+  //Name of service retrieved
+  name: String,
+  //Data retrieved
+  data: Object
+}
+```
+
+### getError
+
+Error retrieving data from the filesystem storage. The returning value is an instance of [Error](https://nodejs.org/dist/latest-v4.x/docs/api/errors.html#errors_class_error)
+
+### updateData
+
+Once data is updated to the filesystem storage.
+
+```javascript
+{
+  //Name of service retrieved
+  name: String,
+  //Data retrieved
+  data: Object
+}
+```
+
+### updateError
+
+Error updating data for service. The returning value is an instance of [Error](https://nodejs.org/dist/latest-v4.x/docs/api/errors.html#errors_class_error)
