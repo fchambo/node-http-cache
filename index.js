@@ -8,6 +8,7 @@ var _ = require('lodash');
 var zlib = require('zlib');
 var CronJob = require('cron').CronJob;
 var level = require('level');
+var fs = require('fs');
 var EventEmitter = require('events').EventEmitter;
 const assert = require('assert');
 
@@ -116,11 +117,21 @@ module.exports = function factory (config) {
 		};
 	}
 
+	function alreadyExists(directoryName) {
+		try{
+			fs.accessSync(directoryName,fs.F_OK);
+		}catch (e){
+			return false;
+		}
+		return true;
+	}
+
 	function init (config) {
 		var debug = debugFactory('node-http-cache:init');
 		debug('config >> %j',config);
-		var dbFilename = config.location + '/node-http-cache.db';
-		db = level(dbFilename);
+		var dbLocation = config.location + '/node-http-cache.db';
+		var runOnInit = alreadyExists(dbLocation);
+		db = level(dbLocation);
 		_.forEach(config.services,function (service) {
 			debug('Scheduling service "%s" with expression "%s"', service.name, service.cronExpression);
 			new CronJob({
@@ -128,7 +139,8 @@ module.exports = function factory (config) {
 				onTick: updateService(service), 
 				onComplete: serviceUpdated(service),
 				start: true,
-				timeZone: service.timezone || config.timezone || 'GMT-0'
+				timeZone: service.timezone || config.timezone || 'GMT-0',
+				runOnInit: runOnInit
 			});
 		});
 		debug('db >> %j',db);
