@@ -45,7 +45,6 @@ module.exports = function factory (config) {
 
 
 	function downloadData(service) {
-		var debug = debugFactory('node-http-cache:downloadData');
 		return http.request(service.httpOptions)
 		.then(
 			function (response) {
@@ -75,11 +74,7 @@ module.exports = function factory (config) {
 					}
 				);
 			}
-		).fail(function error(err) {
-			debug('error >> %j',err);
-			console.error(err.message);
-			throw err;
-		});
+		);
 	}
 
 	function updateService (service) {
@@ -93,7 +88,7 @@ module.exports = function factory (config) {
 					var deferred = Q.defer();
 					db.put(service.name,response.body,function callback(err) {
 						if (err){
-							deferred.reject(err.message);
+							return deferred.reject(err);
 						}else{
 							debug('updateData >> %j', response.body);
 							self.emit('updateData',{name:service.name,data:response.body});
@@ -104,6 +99,7 @@ module.exports = function factory (config) {
 				}
 			).fail(function (err) {
 				debug('error >> %s >> %s',err.message, err.stack);
+				err.name = service.name;
 				self.emit('updateError',err);
 				throw err;
 			});
@@ -189,6 +185,7 @@ module.exports = function factory (config) {
 			}
 		).fail(function (err) {
 			debug('error >> %s', err.message);
+			err.name = serviceName;
 			self.emit('getError', err);
 		});
 	};
