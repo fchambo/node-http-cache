@@ -126,7 +126,7 @@ module.exports = function factory (config) {
 		var debug = debugFactory('node-http-cache:init');
 		debug('config >> %j',config);
 		var dbLocation = config.location + '/node-http-cache.db';
-		var runOnInit = alreadyExists(dbLocation);
+		var runOnInit = !alreadyExists(dbLocation);
 		db = level(dbLocation);
 		_.forEach(config.services,function (service) {
 			debug('Scheduling service "%s" with expression "%s"', service.name, service.cronExpression);
