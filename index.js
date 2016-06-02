@@ -8,7 +8,6 @@ var _ = require('lodash');
 var zlib = require('zlib');
 var CronJob = require('cron').CronJob;
 var level = require('level');
-var fs = require('fs');
 var EventEmitter = require('events').EventEmitter;
 const assert = require('assert');
 
@@ -48,31 +47,36 @@ module.exports = function factory (config) {
 		return http.request(service.httpOptions)
 		.then(
 			function (response) {
-				return response.body.read()
-				.then(
-					function (body) {
-						var encoding = response.headers['content-encoding'];
-            switch (encoding) {
-	            case 'gzip':
-	              return Q.nfcall(zlib.gunzip(body))
-	              .then(
-	              	function buildResponse (body) {
-	              		return {
-	              			body: body.toString(),
-	              			headers: response.headers,
-	              			status: response.status
-	              		};
-	              	}
-	              );
-	            default:
-                return {
-                  body: body.toString(),
-                  headers: response.headers,
-                  status: response.status
-                };
-	          }
-					}
-				);
+				if(response.status >= 200 && response.status < 400){
+					return response.body.read()
+					.then(
+						function (body) {
+							var encoding = response.headers['content-encoding'];
+	            switch (encoding) {
+		            case 'gzip':
+		              return Q.nfcall(zlib.gunzip(body))
+		              .then(
+		              	function buildResponse (body) {
+		              		return {
+		              			body: body.toString(),
+		              			headers: response.headers,
+		              			status: response.status
+		              		};
+		              	}
+		              );
+		            default:
+	                return {
+	                  body: body.toString(),
+	                  headers: response.headers,
+	                  status: response.status
+	                };
+		          }
+						}
+					);
+				}else{
+					var statusDescription = require('http').STATUS_CODES[response.status];
+					throw new Error(util.format('%s >> %s', response.status, statusDescription));
+				}
 			}
 		);
 	}
@@ -99,9 +103,10 @@ module.exports = function factory (config) {
 				}
 			).fail(function (err) {
 				debug('error >> %s >> %s',err.message, err.stack);
-				err.name = service.name;
-				self.emit('updateError',err);
-				throw err;
+				var error = err;
+				error.name = service.name;
+				self.emit('updateError',error);
+				throw error;
 			});
 		};
 	}
@@ -113,33 +118,27 @@ module.exports = function factory (config) {
 		};
 	}
 
-	function alreadyExists(directoryName) {
-		try{
-			fs.accessSync(directoryName,fs.F_OK);
-		}catch (e){
-			return false;
-		}
-		return true;
-	}
-
 	function init (config) {
 		var debug = debugFactory('node-http-cache:init');
 		debug('config >> %j',config);
 		var dbLocation = config.location + '/node-http-cache.db';
-		var runOnInit = !alreadyExists(dbLocation);
 		db = level(dbLocation);
 		_.forEach(config.services,function (service) {
 			debug('Scheduling service "%s" with expression "%s"', service.name, service.cronExpression);
-			new CronJob({
-				cronTime: service.cronExpression, 
-				onTick: updateService(service), 
-				onComplete: serviceUpdated(service),
-				start: true,
-				timeZone: service.timezone || config.timezone || 'GMT-0',
-				runOnInit: runOnInit
+			debug('Checking if snapshot for "%s" already exists', service.name);
+			db.get(service.name,function callback(err) {
+				var runOnInit = false;
+				if(err) {runOnInit = true;}
+				new CronJob({
+					cronTime: service.cronExpression, 
+					onTick: updateService(service), 
+					onComplete: serviceUpdated(service),
+					start: true,
+					timeZone: service.timezone || config.timezone || 'GMT-0',
+					runOnInit: runOnInit
+				});
 			});
 		});
-		debug('db >> %j',db);
 		return function () {
 			EventEmitter.call(this);
 			self = this;
@@ -185,8 +184,10 @@ module.exports = function factory (config) {
 			}
 		).fail(function (err) {
 			debug('error >> %s', err.message);
-			err.name = serviceName;
-			self.emit('getError', err);
+			var error = err;
+			error.name = serviceName;
+			self.emit('getError', error);
+			throw error;
 		});
 	};
 
