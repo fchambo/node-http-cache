@@ -2,7 +2,7 @@
 [![Build Status](https://david-dm.org/neuquino/node-http-cache.svg)](https://david-dm.org/neuquino/node-http-cache.svg)
 [![NPM version](https://badge.fury.io/js/node-http-cache.svg)](http://badge.fury.io/js/node-http-cache)
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/neuquino/node-http-cache?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Gitter](https://badges.gitter.im/node-http-cache/Lobby.svg)](https://gitter.im/node-http-cache/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 [![NPM](https://nodei.co/npm/node-http-cache.png?downloads=true&downloadRank=true&stars=true)](https://nodei.co/npm/node-http-cache/)
 
