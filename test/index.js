@@ -1,10 +1,10 @@
 'use strict';
 
-var cacheFactory = require('../index.js');
-var http = require('http');
-var debugFactory = require('debug');
-var util = require('util');
-var should = require('should');
+const cacheFactory = require('../index.js');
+const http = require('http');
+const debugFactory = require('debug');
+const util = require('util');
+const should = require('should');
 const PORT = 8081;
 const SERVICE_NAME = 'users';
 
@@ -14,7 +14,7 @@ process.on('uncaughtException',function errorHandler (err) {
 });
 
 function mockService (req, res) {
-	var debug = debugFactory('node-http-cache:test:mockService');
+	const debug = debugFactory('node-http-cache:test:mockService');
 	debug('req.headers >> %j', req.headers);
 	debug('req.method >> %s', req.method);
 	res.setHeader('Content-Type', 'application/json');
@@ -29,11 +29,11 @@ var server = http.createServer(mockService);
 describe('users service', function () {
 	this.timeout(5000);
 	it('build snapshot', function buildSnapshot(done) {
-		var debug = debugFactory('node-http-cache:test:buildSnapshot');
+		const debug = debugFactory('node-http-cache:test:buildSnapshot');
 		server.listen(PORT,'localhost',function serverStarted (err) {
 			if (err) {console.error(err.message);}
 			console.log(util.format('Server started at http://localhost:%s',PORT));
-			var config = {
+			const config = {
 				logger: require('winston'),
 				location: process.env.TEST_LOCATION || '/tmp',
 				services:[{
@@ -49,7 +49,7 @@ describe('users service', function () {
 					indexes: ['user']
 				}]
 			};
-			var cache = cacheFactory(config);
+			const cache = cacheFactory(config);
 			cache.on('getData',function (data) {
 				debug('getData event received >> %j',data);
 			});
