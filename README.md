@@ -1,4 +1,11 @@
-[![Travis-CI](https://api.travis-ci.org/neuquino/node-http-cache.svg?branch=master)](https://travis-ci.org/neuquino/node-http-cache) [![GitHub issues](https://img.shields.io/github/issues/neuquino/node-http-cache.svg?style=plastic)](https://github.com/neuquino/node-http-cache/issues) [![GitHub license](https://img.shields.io/badge/license-Apache_2.0-blue.svg?style=plastic)](https://raw.githubusercontent.com/neuquino/node-http-cache/master/LICENSE) [![Node JS version](https://img.shields.io/node/v/neuquino/node-http-cache.svg?style=plastic)](https://nodejs.org/en/) [![npm downloads](https://img.shields.io/npm/dt/neuquino/node-http-cache.svg?style=plastic)](https://www.npmjs.com/package/node-http-cache)
+[![Build Status](https://secure.travis-ci.org/neuquino/node-http-cache.svg?branch=master)](http://travis-ci.org/neuquino/node-http-cache)
+[![Build Status](https://david-dm.org/neuquino/node-http-cache.svg)](https://david-dm.org/neuquino/node-http-cache.svg)
+[![NPM version](https://badge.fury.io/js/node-http-cache.svg)](http://badge.fury.io/js/node-http-cache)
+
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/neuquino/node-http-cache?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+
+[![NPM](https://nodei.co/npm/node-http-cache.png?downloads=true&downloadRank=true&stars=true)](https://nodei.co/npm/node-http-cache/)
+
 
 #HTTP Cache
 
@@ -26,11 +33,12 @@ var config = {
 		name: 'cities',
 		timezone: 'America/Buenos_Aires',
 		httpOptions:{
-			url: 'http://api.geonames.org/citiesJSON?north=44.1&south=-9.9&east=-22.4&west=55.2&lang=de&username=demo',
+			url: 'http://api.geonames.org/citiesJSON?north=44.1&south=-9.9&east=-22.4&west=55.2&lang=de&username=demoapp',
 			headers: {
 				'accept':'application/json'
 			}
-		}
+		},
+		indexes: ['countrycode']
 	}]
 };
 
@@ -40,8 +48,18 @@ var cache = cacheFactory(config);
 
 // (...)
 
-var allCities = cache.get('cities');
-var onlyMXCities = cache.get('cities', {countrycode: 'MX'}); 
+// Retrieves all cities
+var allCities = cache.get(
+  {
+    name: 'cities'
+  }
+);
+var onlyMXCities = cache.get(
+  {
+	  name: 'cities', 
+	  indexKey: 'countrycode',
+	  indexValue: 'MX'
+); 
 ```
 
 ## Configuration
@@ -50,7 +68,7 @@ var onlyMXCities = cache.get('cities', {countrycode: 'MX'});
 
 *Required*: `true`
 
-Root folder for levelup storage.
+Root folder for levelup storage. Inside this directory a folder with the name `node-http-cache.db` will be created. 
 
 ### logger
 
@@ -82,13 +100,43 @@ Node HTTP Cache uses [q-io](https://github.com/kriskowal/q-io) internally to mak
 
 *Default*: `'GMT-0'`
 
+### services.itemsPath
+
+*Required*: `false`
+
+Path to specify where is the array of objects to store. For example, if the response of the service is: `{items:[]}`, then `itemsPath: 'items'`. To specify nested elements, you can use dot notation (i.e.: `itemsPath: 'root.items'`)
+
+### services.indexes
+
+*Required*: `false`
+
+Array of fields to be indexed. For example, if the response of the service is `[{ "user": "barney", "age": 36, "active": true},{ "user": "fred",   "age": 40, "active": false }]`, then you can create an index by user using `indexes: ["user"]`
+
 ## Retrieve data
 
-### get(serviceName)
+### get(config)
 
-Retrieves data saved to the service which name is equal to `serviceName`.
+Retrieves data saved using the config received as parameter.
 
 Returns a [Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)
+
+#### config.name
+
+*Required*: true
+
+Name used in config when the snapshot was created.
+
+#### config.indexKey
+
+*Required*: false
+
+Name of the index used to search.
+
+#### config.indexValue
+
+*Required: false
+
+If you specify an indexKey you *MUST* specify an indexValue.
 
 
 ## Events
@@ -129,6 +177,6 @@ Error updating data for service. The returning value is an instance of [Error](h
 
 ## TO DO
 
-- In memory storage
 - Partial Updates
-- Indexes
+- ~~In memory storage~~
+- ~~Indexes~~

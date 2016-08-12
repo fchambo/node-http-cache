@@ -1,15 +1,16 @@
 'use strict';
 
-var debugFactory = require('debug');
-var Q = require('q');
-var http = require('q-io/http');
-var util = require('util');
-var _ = require('lodash');
-var zlib = require('zlib');
-var CronJob = require('cron').CronJob;
-var level = require('level');
-var EventEmitter = require('events').EventEmitter;
+const debugFactory = require('debug');
+const Q = require('q');
+const http = require('q-io/http');
+const util = require('util');
+const _ = require('lodash');
+const zlib = require('zlib');
+const CronJob = require('cron').CronJob;
+const storage = require('./lib/storage');
+const EventEmitter = require('events').EventEmitter;
 const assert = require('assert');
+const Index = require('./lib/indexes');
 
 var instance;
 
@@ -18,13 +19,12 @@ module.exports = function factory (config) {
 		return instance;
 	}
 
-	var db;
 	var self;
 
 	function buildConfig (config) {
-		var debug = debugFactory('node-http-cache:buildConfig');
+		const debug = debugFactory('node-http-cache:buildConfig');
 		debug('config >> %j', config);
-		var _config = {
+		const _config = {
 			location: config.location || '/tmp'
 		};
 		_config.services=[];
@@ -36,6 +36,8 @@ module.exports = function factory (config) {
 			_config.services.push({
 				name: service.name,
 				cronExpression: service.cronExpression,
+				itemsPath: service.itemsPath,
+				indexes: service.indexes,
 				httpOptions: service.httpOptions
 			});
 		});
@@ -51,14 +53,14 @@ module.exports = function factory (config) {
 					return response.body.read()
 					.then(
 						function (body) {
-							var encoding = response.headers['content-encoding'];
+							const encoding = response.headers['content-encoding'];
 	            switch (encoding) {
 		            case 'gzip':
 		              return Q.nfcall(zlib.gunzip(body))
 		              .then(
 		              	function buildResponse (body) {
 		              		return {
-		              			body: body.toString(),
+		              			body: JSON.parse(body.toString()),
 		              			headers: response.headers,
 		              			status: response.status
 		              		};
@@ -66,7 +68,7 @@ module.exports = function factory (config) {
 		              );
 		            default:
 	                return {
-	                  body: body.toString(),
+	                  body: JSON.parse(body.toString()),
 	                  headers: response.headers,
 	                  status: response.status
 	                };
@@ -74,7 +76,7 @@ module.exports = function factory (config) {
 						}
 					);
 				}else{
-					var statusDescription = require('http').STATUS_CODES[response.status];
+					const statusDescription = require('http').STATUS_CODES[response.status];
 					throw new Error(util.format('%s >> %s', response.status, statusDescription));
 				}
 			}
@@ -83,28 +85,50 @@ module.exports = function factory (config) {
 
 	function updateService (service) {
 		return function (){
-			var debug = debugFactory('node-http-cache:updateService');
+			const debug = debugFactory('node-http-cache:updateService');
 			debug('Updating service "%s"...',service.name);
 			return downloadData(service)
 			.then(
-				function saveToDb (response){
-					debug('Saving to DB "%s" >> %j',service.name,response.body);
-					var deferred = Q.defer();
-					db.put(service.name,response.body,function callback(err) {
-						if (err){
-							return deferred.reject(err);
-						}else{
-							debug('updateData >> %j', response.body);
-							self.emit('updateData',{name:service.name,data:response.body});
-							deferred.resolve(response.body);
-						}
+				function indexes (response) {
+					const indexes = Index.build({
+						data: response.body,
+						itemsPath: service.itemsPath,
+						indexes: service.indexes
 					});
-					return deferred.promise;
+					return {
+						body: response.body,
+						headers: response.headers,
+						indexes: indexes
+					};
+				}
+			).then(
+				function buildObject (response) {
+					return {
+						config: service,
+						data: response.body,
+						headers: response.headers,
+						indexes: response.indexes
+					};
+				}
+			).then(
+				function saveToStorage (object){
+					debug('Saving to DB "%s" >> %j',object.config.name,object);
+					let promises = [];
+					promises.push(storage.put(object.config.name,object));
+					return Q.all(promises)
+					.then(
+						function emitEvent(results) {
+							debug('results >> %j', results);
+							_.forEach(results, function (object) {
+								debug('object >> %j', object);
+								self.emit('updateData',{name:object.config.name,data:object.data});
+							});
+						}
+					);
 				}
 			).fail(function (err) {
-				debug('error >> %s >> %s',err.message, err.stack);
-				var error = err;
-				error.name = service.name;
+				debug('error >> %s >> %s',service.name, err.stack);
+				const error = new Error(util.format('%s >> %s',service.name,err.stack));
 				self.emit('updateError',error);
 				throw error;
 			});
@@ -112,32 +136,39 @@ module.exports = function factory (config) {
 	}
 
 	function serviceUpdated (service) {
-		var debug = debugFactory('node-http-cache:serviceUpdated');
+		const debug = debugFactory('node-http-cache:serviceUpdated');
 		return function () {
 			debug('Service "%s" updated.',service.name);
 		};
 	}
 
 	function init (config) {
-		var debug = debugFactory('node-http-cache:init');
+		const debug = debugFactory('node-http-cache:init');
 		debug('config >> %j',config);
-		var dbLocation = config.location + '/node-http-cache.db';
-		db = level(dbLocation);
+		storage.init(config);
 		_.forEach(config.services,function (service) {
 			debug('Scheduling service "%s" with expression "%s"', service.name, service.cronExpression);
 			debug('Checking if snapshot for "%s" already exists', service.name);
-			db.get(service.name,function callback(err) {
-				var runOnInit = false;
-				if(err) {runOnInit = true;}
-				new CronJob({
-					cronTime: service.cronExpression, 
-					onTick: updateService(service), 
-					onComplete: serviceUpdated(service),
-					start: true,
-					timeZone: service.timezone || config.timezone || 'GMT-0',
-					runOnInit: runOnInit
-				});
-			});
+			storage.get(service.name)
+			.then(
+				function callback() {
+					return false;
+				},
+				function error(){
+					return true;
+				}
+			).then(
+				function startCron (runOnInit) {
+					new CronJob({
+						cronTime: service.cronExpression, 
+						onTick: updateService(service), 
+						onComplete: serviceUpdated(service),
+						start: true,
+						timeZone: service.timezone || config.timezone || 'GMT-0',
+						runOnInit: runOnInit
+					});
+				}
+			);
 		});
 		return function () {
 			EventEmitter.call(this);
@@ -145,33 +176,36 @@ module.exports = function factory (config) {
 		};
 	}
 
-	var debug = debugFactory('node-http-cache:factory');
+	const debug = debugFactory('node-http-cache:factory');
 
-	var _config = buildConfig(config);
+	const _config = buildConfig(config);
 
 	debug('_config >> %j', _config);
-	var NodeHttpCache = init(_config);
+	const NodeHttpCache = init(_config);
 
 	util.inherits(NodeHttpCache,EventEmitter);
 
-	NodeHttpCache.prototype.get = function (serviceName,filters) {
-		var debug = debugFactory('node-http-cache:get');
-		debug ('db >> %j', db);
-		var deferred = Q.defer();
-		db.get(serviceName, function callback (err, data) {
-			if(err){
-				deferred.reject(err);
-			}else{
-				debug('data >> %s', data);
-				deferred.resolve(JSON.parse(data));
-			}
-		});
-		return deferred.promise	
+	NodeHttpCache.prototype.get = function (config) {
+		const serviceName = config.name;
+		const indexKey = config.indexKey;
+		const debug = debugFactory('node-http-cache:get');
+		debug('serviceName >> %s', serviceName);
+		debug('indexKey >> %s', indexKey);
+		return storage.get(serviceName)
 		.then(
-			function applyFilters (data){
-				debug ('data >> %j', data);
-				debug('filters >> %j', filters);	
-				return filters ? _.filter(data, _.matches(filters)) : data;
+			function findIndex (object) {
+				if(indexKey){					
+					const indexes = object.indexes;
+					const indexValue = config.indexValue;
+					return Index.find({
+						indexes: indexes,
+						indexKey: indexKey,
+						indexValue: indexValue,
+						data: object.data
+					});
+				}
+				debug(util.format('No index defined for retrieving %s',serviceName));
+				return object.data;
 			}
 		).then(
 			function debugLog(data){
@@ -183,9 +217,8 @@ module.exports = function factory (config) {
 				return data;
 			}
 		).fail(function (err) {
-			debug('error >> %s', err.message);
-			var error = err;
-			error.name = serviceName;
+			debug('error >> %s >> %s', err.message, err.stack);
+			const error = new Error(util.format('%s >> %s',serviceName,err.stack));
 			self.emit('getError', error);
 			throw error;
 		});

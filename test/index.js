@@ -32,7 +32,7 @@ describe('users service', function () {
 		var debug = debugFactory('node-http-cache:test:buildSnapshot');
 		server.listen(PORT,'localhost',function serverStarted (err) {
 			if (err) {console.error(err.message);}
-			console.log(util.format('Server started at http//localhost:%s',PORT));
+			console.log(util.format('Server started at http://localhost:%s',PORT));
 			var config = {
 				logger: require('winston'),
 				location: process.env.TEST_LOCATION || '/tmp',
@@ -45,7 +45,8 @@ describe('users service', function () {
 						headers: {
 							'accept':'application/json'
 						}
-					}
+					},
+					indexes: ['user']
 				}]
 			};
 			var cache = cacheFactory(config);
@@ -62,10 +63,12 @@ describe('users service', function () {
 				debug('updateError event received >> %s',err.message);
 			});
 			setTimeout(function () {
-				cache.get(SERVICE_NAME, 
-						{active: true}
-					)
-				.then(function (data) {
+				cache.get({
+					name: SERVICE_NAME, 
+					indexKey: 'user',
+					indexValue: 'barney',
+					filters: {active: true}
+				}).then(function (data) {
 					should.exist(data);
 					should.deepEqual(data,[{ 'user': 'barney', 'age': 36, 'active': true }]);
 				})

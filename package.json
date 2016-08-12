@@ -15,10 +15,11 @@
     "winston": "2.2.0"
   },
   "dependencies": {
+    "cron": "1.1.0",
     "debug": "2.2.0",
     "level": "1.4.0",
     "lodash": "4.11.1",
-    "cron": "1.1.0",
+    "node-cache": "3.2.1",
     "q": "1.4.1",
     "q-io": "1.13.2"
   },
@@ -31,10 +32,12 @@
   "bugs": {
     "url": "https://github.com/neuquino/node-http-cache/issues"
   },
-  "engines":{
+  "engines": {
     "node": ">=4.4.x"
   },
-  "os":["linux"],
+  "os": [
+    "linux"
+  ],
   "publishConfig": {
     "registry": "https://registry.npmjs.org"
   },
