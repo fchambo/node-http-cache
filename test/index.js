@@ -135,6 +135,7 @@ describe('cities service', function () {
 					indexKey: 'id',
 					indexValue: '1342108'
 				}).then(function (data) {
+					debugCities('data >> %j', data);
 					should.exist(data);
 					//should.deepEqual(data,[{ 'user': 'barney', 'age': 36, 'active': true }]);
 					cacheCities.stop();
@@ -142,7 +143,7 @@ describe('cities service', function () {
 				})
 				.then(done)
 				.fail(done);
-			},4000);
+			},10000);
 		});
 	});
 });

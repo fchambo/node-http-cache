@@ -47,6 +47,7 @@ module.exports = function factory (config) {
 
 
 	function downloadData(service) {
+		var debug = debugFactory('node-http-cache:downloadData');
 		return http.request(service.httpOptions)
 		.then(
 			function (response) {
@@ -68,6 +69,7 @@ module.exports = function factory (config) {
 		              	}
 		              );
 		            default:
+		            	debug('body');
 	                return {
 	                  body: JSON.parse(body.toString()),
 	                  headers: response.headers,
@@ -92,28 +94,32 @@ module.exports = function factory (config) {
 			.then(
 				function indexes (response) {
 					const body = service.itemsPath ? response.body[service.itemsPath] : response.body;
-					const indexes = Index.build({
-						data: body,
-						indexes: service.indexes
-					});
-					return {
-						body: body,
-						headers: response.headers,
-						indexes: indexes
-					};
-				}
-			).then(
-				function buildObject (response) {
-					return {
-						config: service,
-						data: response.body,
-						headers: response.headers,
-						indexes: response.indexes
-					};
+					if(service.indexes){
+						return Index.build({
+							data: body,
+							indexes: service.indexes
+						})
+						.then(
+							function (indexes) {
+								return {
+									config: service,
+									body: body,
+									headers: response.headers,
+									indexes: indexes
+								};
+							}
+						);
+					}else{
+						return {
+							config: service,
+							body: body,
+							headers: response.headers
+						};
+					}
 				}
 			).then(
 				function saveToStorage (object){
-					//debug('Saving to DB "%s" >> %j',object.config.name,object);
+					debug('Saving to DB "%s" >> %j',object.config.name,object);
 					let promises = [];
 					promises.push(storage.put(object.config.name,object));
 					return Q.all(promises)
@@ -160,6 +166,7 @@ module.exports = function factory (config) {
 				}
 			).then(
 				function startCron (runOnInit) {
+					debug('runOnInit >> %s', runOnInit);
 					cronJobs.push(new CronJob({
 						cronTime: service.cronExpression, 
 						onTick: updateService(service), 
@@ -202,6 +209,7 @@ module.exports = function factory (config) {
 		return storage.get(serviceName)
 		.then(
 			function findIndex (object) {
+				debug('object >> %j', object);
 				if(indexKey){					
 					const indexes = object.indexes;
 					const indexValue = config.indexValue;
@@ -209,11 +217,11 @@ module.exports = function factory (config) {
 						indexes: indexes,
 						indexKey: indexKey,
 						indexValue: indexValue,
-						data: object.data
+						data: object.body
 					});
 				}
 				debug(util.format('No index defined for retrieving %s',serviceName));
-				return object.data;
+				return object.body;
 			}
 		).then(
 			function debugLog(data){
