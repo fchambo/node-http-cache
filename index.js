@@ -11,13 +11,14 @@ const storage = require('./lib/storage');
 const EventEmitter = require('events').EventEmitter;
 const assert = require('assert');
 const Index = require('./lib/indexes');
+const cronJobs = [];
 
 var instance;
 
 module.exports = function factory (config) {
-	if (instance){
+	/*if (instance){
 		return instance;
-	}
+	}*/
 
 	var self;
 
@@ -90,13 +91,13 @@ module.exports = function factory (config) {
 			return downloadData(service)
 			.then(
 				function indexes (response) {
+					const body = service.itemsPath ? response.body[service.itemsPath] : response.body;
 					const indexes = Index.build({
-						data: response.body,
-						itemsPath: service.itemsPath,
+						data: body,
 						indexes: service.indexes
 					});
 					return {
-						body: response.body,
+						body: body,
 						headers: response.headers,
 						indexes: indexes
 					};
@@ -112,15 +113,15 @@ module.exports = function factory (config) {
 				}
 			).then(
 				function saveToStorage (object){
-					debug('Saving to DB "%s" >> %j',object.config.name,object);
+					//debug('Saving to DB "%s" >> %j',object.config.name,object);
 					let promises = [];
 					promises.push(storage.put(object.config.name,object));
 					return Q.all(promises)
 					.then(
 						function emitEvent(results) {
-							debug('results >> %j', results);
+							//debug('results >> %j', results);
 							_.forEach(results, function (object) {
-								debug('object >> %j', object);
+								//debug('object >> %j', object);
 								self.emit('updateData',{name:object.config.name,data:object.data});
 							});
 						}
@@ -128,7 +129,7 @@ module.exports = function factory (config) {
 				}
 			).fail(function (err) {
 				debug('error >> %s >> %s',service.name, err.stack);
-				const error = new Error(util.format('%s >> %s',service.name,err.stack));
+				var error = new Error(util.format('%s >> %s',service.name,err.stack));
 				self.emit('updateError',error);
 				throw error;
 			});
@@ -136,14 +137,14 @@ module.exports = function factory (config) {
 	}
 
 	function serviceUpdated (service) {
-		const debug = debugFactory('node-http-cache:serviceUpdated');
+		var debug = debugFactory('node-http-cache:serviceUpdated');
 		return function () {
 			debug('Service "%s" updated.',service.name);
 		};
 	}
 
 	function init (config) {
-		const debug = debugFactory('node-http-cache:init');
+		var debug = debugFactory('node-http-cache:init');
 		debug('config >> %j',config);
 		storage.init(config);
 		_.forEach(config.services,function (service) {
@@ -159,14 +160,14 @@ module.exports = function factory (config) {
 				}
 			).then(
 				function startCron (runOnInit) {
-					new CronJob({
+					cronJobs.push(new CronJob({
 						cronTime: service.cronExpression, 
 						onTick: updateService(service), 
 						onComplete: serviceUpdated(service),
 						start: true,
 						timeZone: service.timezone || config.timezone || 'GMT-0',
 						runOnInit: runOnInit
-					});
+					}));
 				}
 			);
 		});
@@ -174,6 +175,13 @@ module.exports = function factory (config) {
 			EventEmitter.call(this);
 			self = this;
 		};
+	}
+
+	function stop(){
+		_.forEach(cronJobs, function (cron) {
+			cron.stop();
+		});
+		storage.close();
 	}
 
 	const debug = debugFactory('node-http-cache:factory');
@@ -209,7 +217,7 @@ module.exports = function factory (config) {
 			}
 		).then(
 			function debugLog(data){
-				debug('%s >> %j', serviceName,data);
+				//debug('%s >> %j', serviceName,data);
 				self.emit('getData',{
 					name: serviceName,
 					data: data
@@ -224,7 +232,12 @@ module.exports = function factory (config) {
 		});
 	};
 
+	NodeHttpCache.prototype.stop = function() {
+		stop();
+	};
+	
 	instance = new NodeHttpCache();
-
+	
 	return instance;
+	
 };
