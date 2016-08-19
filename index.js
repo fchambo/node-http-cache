@@ -1,11 +1,9 @@
 'use strict';
 
 const debugFactory = require('debug');
-const Q = require('q');
-const http = require('q-io/http');
+const httpClient = require('./lib/http-client');
 const util = require('util');
 const _ = require('lodash');
-const zlib = require('zlib');
 const CronJob = require('cron').CronJob;
 const storage = require('./lib/storage');
 const EventEmitter = require('events').EventEmitter;
@@ -32,8 +30,7 @@ module.exports = function factory (config) {
 		_.forEach(config.services,function (service, key) {
 			assert(service.name, util.format('services[%s].name must be defined', key));
 			assert(service.cronExpression, util.format('service[%s].cronExpression must be defined', key));
-			assert(service.httpOptions, util.format('service[%s].httpOptions.url must be defined', key));
-			assert(service.httpOptions.url, util.format('service[%s].httpOptions.url must be defined', key));
+			assert(service.httpOptions, util.format('service[%s].httpOptions must be defined', key));
 			_config.services.push({
 				name: service.name,
 				cronExpression: service.cronExpression,
@@ -46,83 +43,31 @@ module.exports = function factory (config) {
 	}
 
 
-	function downloadData(service) {
-		var debug = debugFactory('node-http-cache:downloadData');
-		return http.request(service.httpOptions)
-		.then(
-			function (response) {
-				if(response.status >= 200 && response.status < 400){
-					return response.body.read()
-					.then(
-						function (body) {
-							const encoding = response.headers['content-encoding'];
-	            switch (encoding) {
-		            case 'gzip':
-		              return Q.nfcall(zlib.gunzip(body))
-		              .then(
-		              	function buildResponse (body) {
-		              		return {
-		              			body: JSON.parse(body.toString()),
-		              			headers: response.headers,
-		              			status: response.status
-		              		};
-		              	}
-		              );
-		            default:
-		            	debug('body');
-	                return {
-	                  body: JSON.parse(body.toString()),
-	                  headers: response.headers,
-	                  status: response.status
-	                };
-		          }
-						}
-					);
-				}else{
-					const statusDescription = require('http').STATUS_CODES[response.status];
-					throw new Error(util.format('%s >> %s', response.status, statusDescription));
-				}
-			}
-		);
-	}
-
 	function updateService (service) {
 		return function (){
-			const debug = debugFactory('node-http-cache:updateService');
-			debug('Updating service "%s"...',service.name);
-			return downloadData(service)
+			const debug = debugFactory('node-http-cache:updateService:' + service.name);
+			debug('Updating service...');
+			return httpClient.downloadData(service.httpOptions)
 			.then(
 				function indexes (response) {
 					const body = service.itemsPath ? response.body[service.itemsPath] : response.body;
 					if(service.indexes){
 						return Index.build({
+							name: service.name,
 							data: body,
 							indexes: service.indexes
-						})
-						.then(
-							function (indexes) {
-								return {
-									config: service,
-									body: body,
-									headers: response.headers,
-									indexes: indexes
-								};
-							}
-						);
-					}else{
-						return {
-							config: service,
-							body: body,
-							headers: response.headers
-						};
+						});
 					}
+					return {
+						config: service,
+						body: body,
+						headers: response.headers
+					};
 				}
 			).then(
 				function saveToStorage (object){
 					debug('Saving to DB "%s" >> %j',object.config.name,object);
-					let promises = [];
-					promises.push(storage.put(object.config.name,object));
-					return Q.all(promises)
+					return storage.put(object.config.name,object)
 					.then(
 						function emitEvent(results) {
 							//debug('results >> %j', results);
@@ -143,9 +88,9 @@ module.exports = function factory (config) {
 	}
 
 	function serviceUpdated (service) {
-		var debug = debugFactory('node-http-cache:serviceUpdated');
+		var debug = debugFactory('node-http-cache:serviceUpdated:' + service.name);
 		return function () {
-			debug('Service "%s" updated.',service.name);
+			debug('Service updated.');
 		};
 	}
 
@@ -203,27 +148,15 @@ module.exports = function factory (config) {
 	NodeHttpCache.prototype.get = function (config) {
 		const serviceName = config.name;
 		const indexKey = config.indexKey;
-		const debug = debugFactory('node-http-cache:get');
-		debug('serviceName >> %s', serviceName);
+		const debug = debugFactory('node-http-cache:get:' + serviceName);
+		const indexValue = config.indexValue;
 		debug('indexKey >> %s', indexKey);
-		return storage.get(serviceName)
+		var storageKey = serviceName;
+		if(indexKey && indexValue){
+			storageKey = util.format('%s_%s_%s',serviceName,indexKey,indexValue);
+		}
+		return storage.get(storageKey)
 		.then(
-			function findIndex (object) {
-				debug('object >> %j', object);
-				if(indexKey){					
-					const indexes = object.indexes;
-					const indexValue = config.indexValue;
-					return Index.find({
-						indexes: indexes,
-						indexKey: indexKey,
-						indexValue: indexValue,
-						data: object.body
-					});
-				}
-				debug(util.format('No index defined for retrieving %s',serviceName));
-				return object.body;
-			}
-		).then(
 			function debugLog(data){
 				//debug('%s >> %j', serviceName,data);
 				self.emit('getData',{
