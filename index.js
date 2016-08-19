@@ -56,6 +56,13 @@ module.exports = function factory (config) {
 							name: service.name,
 							data: body,
 							indexes: service.indexes
+						}).
+						then(function () {
+							return {
+								config: service,
+								body: body,
+								headers: response.headers
+							};
 						});
 					}
 					return {
@@ -69,12 +76,9 @@ module.exports = function factory (config) {
 					debug('Saving to DB "%s" >> %j',object.config.name,object);
 					return storage.put(object.config.name,object)
 					.then(
-						function emitEvent(results) {
-							//debug('results >> %j', results);
-							_.forEach(results, function (object) {
-								//debug('object >> %j', object);
-								self.emit('updateData',{name:object.config.name,data:object.data});
-							});
+						function emitEvent(savedObject) {
+							debug('object >> %j', savedObject);
+							self.emit('updateData',{name:savedObject.config.name,data:savedObject.body});
 						}
 					);
 				}
