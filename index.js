@@ -73,11 +73,10 @@ module.exports = function factory (config) {
 				}
 			).then(
 				function saveToStorage (object){
-					debug('Saving to DB "%s" >> %j',object.config.name,object);
+					debug('Saving to DB "%s"',object.config.name);
 					return storage.put(object.config.name,object)
 					.then(
 						function emitEvent(savedObject) {
-							debug('object >> %j', savedObject);
 							self.emit('updateData',{name:savedObject.config.name,data:savedObject.body});
 						}
 					);
@@ -98,6 +97,19 @@ module.exports = function factory (config) {
 		};
 	}
 
+	function exists (key) {
+		return storage.getKeys()
+		.then(
+			function (keys) {
+				var foundKey = _.find(keys,function (storageKey) {
+					return storageKey === key;
+				});
+				debug('foundKey >> %j', typeof foundKey);
+				return typeof foundKey !== 'undefined';
+			}
+		);
+	}
+
 	function init (config) {
 		var debug = debugFactory('node-http-cache:init');
 		debug('config >> %j',config);
@@ -105,10 +117,11 @@ module.exports = function factory (config) {
 		_.forEach(config.services,function (service) {
 			debug('Scheduling service "%s" with expression "%s"', service.name, service.cronExpression);
 			debug('Checking if snapshot for "%s" already exists', service.name);
-			storage.get(service.name)
+			exists(service.name)
 			.then(
-				function callback() {
-					return false;
+				function callback(exists) {
+					debug('exists >> %j',exists);
+					return !exists;
 				},
 				function error(){
 					return true;
@@ -159,6 +172,7 @@ module.exports = function factory (config) {
 		if(indexKey && indexValue){
 			storageKey = util.format('%s_%s_%s',serviceName,indexKey,indexValue);
 		}
+		debug('storageKey >> %j',storageKey);
 		return storage.get(storageKey)
 		.then(
 			function debugLog(data){
@@ -176,6 +190,8 @@ module.exports = function factory (config) {
 			throw error;
 		});
 	};
+
+	NodeHttpCache.prototype.exists = exists;
 
 	NodeHttpCache.prototype.stop = function() {
 		stop();
