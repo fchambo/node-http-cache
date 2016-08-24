@@ -1,5 +1,4 @@
 'use strict';
-
 const debugFactory = require('debug');
 const httpClient = require('./lib/http-client');
 const util = require('util');
@@ -14,9 +13,6 @@ const cronJobs = [];
 var instance;
 
 module.exports = function factory (config) {
-	/*if (instance){
-		return instance;
-	}*/
 
 	var self;
 
@@ -57,11 +53,12 @@ module.exports = function factory (config) {
 							data: body,
 							indexes: service.indexes
 						}).
-						then(function () {
+						then(function (indexes) {
 							return {
 								config: service,
 								body: body,
-								headers: response.headers
+								headers: response.headers,
+								indexes: indexes
 							};
 						});
 					}
@@ -104,7 +101,6 @@ module.exports = function factory (config) {
 				var foundKey = _.find(keys,function (storageKey) {
 					return storageKey === key;
 				});
-				debug('foundKey >> %j', typeof foundKey);
 				return typeof foundKey !== 'undefined';
 			}
 		);
@@ -168,15 +164,10 @@ module.exports = function factory (config) {
 		const debug = debugFactory('node-http-cache:get:' + serviceName);
 		const indexValue = config.indexValue;
 		debug('indexKey >> %s', indexKey);
-		var storageKey = serviceName;
-		if(indexKey && indexValue){
-			storageKey = util.format('%s_%s_%s',serviceName,indexKey,indexValue);
-		}
-		debug('storageKey >> %j',storageKey);
-		return storage.get(storageKey)
+		return storage.get(serviceName)
 		.then(
-			function debugLog(data){
-				//debug('%s >> %j', serviceName,data);
+			function debugLog(loadedData){
+				var data = (indexKey && indexValue) ? loadedData.indexes[indexKey][indexValue] : loadedData;
 				self.emit('getData',{
 					name: serviceName,
 					data: data
