@@ -9,6 +9,7 @@ const EventEmitter = require('events').EventEmitter;
 const assert = require('assert');
 const Index = require('./lib/indexes');
 const cronJobs = [];
+const os = require('os');
 
 var instance;
 
@@ -20,7 +21,7 @@ module.exports = function factory (config) {
 		const debug = debugFactory('node-http-cache:buildConfig');
 		debug('config >> %j', config);
 		const _config = {
-			location: config.location || '/tmp'
+			location: config.location || os.tmpdir()
 		};
 		_config.services=[];
 		_.forEach(config.services,function (service, key) {

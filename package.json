@@ -34,9 +34,6 @@
   "engines": {
     "node": ">=4.4.x"
   },
-  "os": [
-    "linux"
-  ],
   "publishConfig": {
     "registry": "https://registry.npmjs.org"
   },
