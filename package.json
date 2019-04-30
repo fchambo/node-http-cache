@@ -10,17 +10,17 @@
     "test": "mocha"
   },
   "devDependencies": {
-    "mocha": "^2.4.5",
-    "should": "^8.3.2",
-    "winston": "2.2.0"
+    "mocha": "6.1.4",
+    "should": "13.2.3",
+    "winston": "3.2.1"
   },
   "dependencies": {
-    "cron": "1.1.0",
-    "debug": "2.2.0",
-    "level": "1.4.0",
-    "lodash": "4.15.0",
-    "q": "1.4.1",
-    "q-io": "1.13.2"
+    "cron": "1.7.0",
+    "debug": "4.1.1",
+    "level": "5.0.1",
+    "lodash": "4.17.11",
+    "q": "1.5.1",
+    "q-io": "1.13.6"
   },
   "repository": {
     "type": "git",
