@@ -10,7 +10,7 @@
     "test": "mocha"
   },
   "devDependencies": {
-    "mocha": "6.1.4",
+    "mocha": "^7.2.0",
     "should": "13.2.3",
     "winston": "3.2.1"
   },
