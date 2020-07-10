@@ -92,7 +92,7 @@ Use [crontab expressions](http://crontab.org/) to specify when the snapshot shou
 
 *Required*: `true`
 
-Node HTTP Cache uses [q-io](https://github.com/kriskowal/q-io) internally to make the requests. You can set any option specified in [its docs](https://github.com/kriskowal/q-io#request). Only `service.httpOptions.url` is required.
+Node HTTP Cache uses [HTTP Module](https://nodejs.org/api/http.html) internally to make the requests. You can set any option specified in [its docs](https://nodejs.org/api/http.html#http_http_request_options_callback). Only `service.httpOptions.url` is required.
 
 ### services.timezone 
 
